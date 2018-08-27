@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { getWeather } from './actions';
 import { KELVIN } from './constants';
@@ -98,8 +99,6 @@ class HomeScreen extends React.Component
         const { error, data } = this.state;
         const { container, header, heading, small, light, red, uppercase, centerXY, display, normal } = styles;
         
-        console.log(1, data, error);
-
         return (
             <React.Fragment>
             {
@@ -192,6 +191,10 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     }
 });
+
+HomeScreen.propTypes = {
+    getWeather: PropTypes.func.isRequired,
+}
 
 const mapStateToProps = state => ({
     weather: state.Weather,
