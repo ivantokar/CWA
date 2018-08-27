@@ -1,21 +1,11 @@
 import { KELVIN } from './constants';
 
-const initialState = {
-    dt: 1535317200,
-    main: {
-        temp: KELVIN,
-        humidity: 0
-    }
-}
-
-console.log(Date.now());
-
-export const Weather = (state = initialState, action) => {
+export const Weather = (state = null, action) => {
     switch (action.type) {
         case 'GET_WEATHER_SUCCESS':
-            return action.data;
+            return action;
         case 'GET_WEATHER_FAIL':
-            return action.data;
+            return action;
         default:
             return state;
     }

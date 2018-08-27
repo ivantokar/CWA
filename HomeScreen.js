@@ -1,8 +1,14 @@
 import React from 'react';
-import { StyleSheet, Text, View, Button } from 'react-native';
 import { connect } from 'react-redux';
 import { getWeather } from './actions';
 import { KELVIN } from './constants';
+import {
+    StyleSheet,
+    Text,
+    View,
+    Button,
+    AsyncStorage
+} from 'react-native';
 import Moment from 'moment';
 
 class HomeScreen extends React.Component
@@ -13,12 +19,59 @@ class HomeScreen extends React.Component
         this.state = {
             latitude: 0,
             longitude: 0,
-            error: null,
+            error: false,
+            data: null,
         };
     }
 
-    componentDidMount = () => {
+    componentWillMount() {
+        this.retrieveDataFromStorage();
+    }
+
+    componentDidMount() {
         this.refreshWeather();
+    }
+
+    componentWillReceiveProps(nextProps) {
+        if (nextProps.weather.type !== 'GET_WEATHER_FAIL') {
+            this.setState({
+                data: nextProps.weather.data,
+            });
+            
+            this.storeDataToStorage(nextProps.weather.data);
+        } else {
+            this.setState({
+                error: true,
+            });
+        }
+    }
+
+    retrieveDataFromStorage = () => {
+        try {
+            var stored = AsyncStorage.getItem('CW');
+            
+            if (stored !== null) {
+                this.setState({
+                    data: JSON.parse(stored),
+                    error: false,
+                });
+            }
+            return;
+        } catch (error) {
+            this.setState({
+                data: null,
+            });
+
+            return false;
+        }
+    }
+
+    storeDataToStorage = (data) => {
+        try {
+            AsyncStorage.setItem('CW', JSON.stringify(data));
+        } catch (error) {
+            console.error('Storing: ', error);
+        }
     }
 
     refreshWeather = () => {
@@ -27,13 +80,12 @@ class HomeScreen extends React.Component
                 this.setState({
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
-                    error: null,
                 });
 
                 this.props.getWeather(this.state);
             },
             (error) => this.setState({
-                    error: error.message
+                    error: error.message,
                 }), {
                 enableHighAccuracy: true,
                 timeout: 20000,
@@ -43,47 +95,59 @@ class HomeScreen extends React.Component
     }
 
     render() {
-        const { error } = this.state;
-        const { dt, main, name  } = this.props.data;
-        const {
-            container,
-            headerContainer,
-            headerText,
-            headerDateText,
-            headerCityText,
-            dataContainer,
-            temperatureText,
-            humidityText,
-            buttonContainer
-        } = styles;
+        const { error, data } = this.state;
+        const { container, header, heading, small, light, red, uppercase, centerXY, display, normal } = styles;
         
+        console.log(1, data, error);
+
         return (
-            <View style={container}>
-                <View style={headerContainer}>
-                    <Text style={headerText}>Weather at your location</Text>
-                    <Text style={headerDateText}>
-                        {
-                            Moment(new Date(dt * 1000)).format('LLLL')
-                        }
-                    </Text>
-                    <Text style={headerCityText}>{ name }</Text>
-                </View>
-                <View style={dataContainer}>
-                    <Text style={temperatureText}>
-                    { 
-                        Math.round(main.temp - KELVIN)
-                    }
-                    &#8451;
-                    </Text>
-                    <Text style={humidityText}>humidity: { main.humidity }%</Text>
-                </View>
-                <View style={buttonContainer}>
-                    <Button
-                        onPress={this.refreshWeather}
-                        title="Refresh Weather"
-                    />
-                </View>
-            </View>
+            <React.Fragment>
+            {
+                data !== null
+                ?
+                    <View style={container}>
+                        <View style={header}>
+                            <Text style={heading}>Weather at your location</Text>
+                            <Text style={[small, light]}>
+                                {
+                                    Moment(new Date(data.dt * 1000)).format('LLLL')
+                                }
+                            </Text>
+                            <Text style={[normal, {paddingTop: 10}]}>{data.name}</Text>
+                        </View>
+                        <View style={[centerXY, {flex: 4}]}>
+                            <Text style={display}>
+                                {
+                                    Math.round(data.main.temp - KELVIN)
+                                }
+                                &#8451;
+                            </Text>
+                            <Text style={[small, light, uppercase]}>humidity: {data.main.humidity}%</Text>
+                        </View>
+                        <View style={[centerXY, {flex: 1}]}>
+                            <Button
+                                style={{ height: 60 }}
+                                onPress={this.refreshWeather}
+                                title="Refresh Weather"
+                            />
+                        </View>
+                    </View>
+                :
+                    <View style={[container, centerXY]}>
+                        <View>
+                            {
+                                error
+                                ?
+                                    <Text style={[ red, small, {paddingTop: 10} ]}>
+                                        It's likely that your connection has been interrupted
+                                    </Text>
+                                :
+                                    <Text style={[normal, light]}>Loading...</Text>
+                            }
+                        </View>
+                    </View>
+            }
+            </React.Fragment>
         );
     }
 }
@@ -94,45 +158,43 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         backgroundColor: '#fff',
     },
-    headerContainer: {
+    header: {
         flex: 1.5,
         justifyContent: 'flex-end',
         alignItems: 'center',
     },
-    headerText: {
+    heading: {
         fontSize: 18,
         fontWeight: '300',
     },
-    headerDateText: {
+    small: {
         fontSize: 12,
-        color: '#666',
+        
         paddingTop: 5,
     },
-    headerCityText: {
-        paddingTop: 10,
-    },
-    dataContainer: {
-        flex: 4,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    buttonContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    temperatureText: {
+    display: {
         fontSize: 40,
     },
-    humidityText: {
+    normal: {
         fontSize: 14,
+    },
+    light: {
         color: '#666',
-        textTransform: 'uppercase'
+    },
+    red: {
+        color: '#EF5350',
+    },
+    centerXY: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    uppercase: {
+        textTransform: 'uppercase',
     }
 });
 
 const mapStateToProps = state => ({
-    data: state.Weather,
+    weather: state.Weather,
 });
 
 const mapDispatchToProps = {

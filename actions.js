@@ -13,7 +13,8 @@ export const getWeather = (data)  => {
             .catch((fail) => {
                 dispatch({
                     type: 'GET_WEATHER_FAIL',
-                    data: fail
+                    data: null,
+                    error: true
                 });
             });
     };
